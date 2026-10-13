@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Array ZTAG CLI Config Generator / 設定檔產生器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    body { font-family: 'Noto Sans TC', -apple-system, sans-serif; }
+    pre, code, input.mono, select.mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- 頂部導覽列 -->
+  <header class="bg-slate-900 text-white shadow-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg text-white shadow-inner">
+          ZT
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg leading-tight" data-i18n="app_title">Array ZTAG CLI 設定檔產生器</h1>
+            <span class="text-xs bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 px-2 py-0.5 rounded-full font-mono">v10.3 / POC Pro</span>
+          </div>
+          <p class="text-xs text-slate-400" data-i18n="app_subtitle">快速產出可直接匯入 Array ZTAG 的 CLI 初始化與策略腳本</p>
+        </div>
+      </div>
+      
+      <!-- 語系與工具 -->
+      <div class="flex items-center space-x-3 text-sm">
+        <div class="flex bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+          <button id="langZh" onclick="setLang('zh')" class="px-2.5 py-1 rounded text-xs font-medium transition bg-indigo-600 text-white">繁體中文</button>
+          <button id="langEn" onclick="setLang('en')" class="px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white">English</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容容器 -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- 左側：參數設定面板 (佔 7 格) -->
+    <section class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+      
+      <!-- 步驟頁籤 (Tabs) -->
+      <div class="flex border-b border-slate-200 bg-slate-50/70 text-xs font-semibold overflow-x-auto">
+        <button onclick="switchTab('tab-net')" id="btn-tab-net" class="tab-btn active px-3.5 py-3 border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-network-wired"></i> <span data-i18n="tab_net">1. 基礎網路</span>
+        </button>
+        <button onclick="switchTab('tab-aaa')" id="btn-tab-aaa" class="tab-btn px-3.5 py-3 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-users"></i> <span data-i18n="tab_aaa">2. 認證與帳號</span>
+        </button>
+        <button onclick="switchTab('tab-role')" id="btn-tab-role" class="tab-btn px-3.5 py-3 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-user-shield"></i> <span data-i18n="tab_role">3. 角色與授權</span>
+        </button>
+        <button onclick="switchTab('tab-res')" id="btn-tab-res" class="tab-btn px-3.5 py-3 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-desktop"></i> <span data-i18n="tab_res">4. 資源管理</span>
+        </button>
+        <button onclick="switchTab('tab-vpn')" id="btn-tab-vpn" class="tab-btn px-3.5 py-3 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-server"></i> <span data-i18n="tab_vpn">5. Net Pool</span>
+        </button>
+        <button onclick="switchTab('tab-sec')" id="btn-tab-sec" class="tab-btn px-3.5 py-3 border-b-2 border-transparent text-slate-600 hover:text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-shield-halved"></i> <span data-i18n="tab_sec">6. 安全防護</span>
+        </button>
+      </div>
+
+      <!-- 表單內容 -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-5 text-sm max-h-[680px]">
+        
+        <!-- Tab 1: 基礎網路 -->
+        <div id="tab-net" class="tab-pane space-y-4">
+          <div class="border-b border-slate-100 pb-2">
+            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span data-i18n="sec_net">管理網路 & Virtual Site 設置</span>
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_mgip">管理介面 IP (Port 1)</label>
+              <input type="text" id="mgip" value="192.168.200.71" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_mask">網路遮罩</label>
+              <input type="text" id="mgmask" value="255.255.255.0" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_gw">預設閘道 (Gateway)</label>
+              <input type="text" id="gw" value="192.168.200.254" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_dns">DNS 主機 IP</label>
+              <input type="text" id="dns" value="192.168.4.10" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_vsname">Virtual Site 名稱</label>
+              <input type="text" id="vsname" value="vs" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_vsip">Virtual Site IP</label>
+              <input type="text" id="vsip" value="192.168.4.77" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_vsport">SSL Port</label>
+              <input type="number" id="vsport" value="443" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: 認證 AAA 與 多群組/多使用者 -->
+        <div id="tab-aaa" class="tab-pane hidden space-y-4">
+          <div class="border-b border-slate-100 pb-2">
+            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span data-i18n="sec_aaa">認證伺服器與帳號資料庫</span>
+            </h2>
+          </div>
+
+          <!-- 模式選擇 -->
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-2" data-i18n="lbl_auth_arch">主要認證架構</label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <label class="cursor-pointer border rounded-lg p-2.5 flex flex-col items-center justify-center gap-1.5 text-center transition hover:border-indigo-300 has-[:checked]:bg-indigo-50/50 has-[:checked]:border-indigo-600 has-[:checked]:text-indigo-900">
+                <input type="radio" name="auth_mode" value="localdb" onchange="render()" checked class="sr-only">
+                <i class="fa-solid fa-database text-sm"></i>
+                <span class="text-xs font-medium" data-i18n="opt_localdb">純 LocalDB</span>
+              </label>
+              <label class="cursor-pointer border rounded-lg p-2.5 flex flex-col items-center justify-center gap-1.5 text-center transition hover:border-indigo-300 has-[:checked]:bg-indigo-50/50 has-[:checked]:border-indigo-600 has-[:checked]:text-indigo-900">
+                <input type="radio" name="auth_mode" value="otp_only" onchange="render()" class="sr-only">
+                <i class="fa-solid fa-mobile-screen-button text-sm text-amber-600"></i>
+                <span class="text-xs font-medium" data-i18n="opt_otp_only">僅 OTP (Only OTP)</span>
+              </label>
+              <label class="cursor-pointer border rounded-lg p-2.5 flex flex-col items-center justify-center gap-1.5 text-center transition hover:border-indigo-300 has-[:checked]:bg-indigo-50/50 has-[:checked]:border-indigo-600 has-[:checked]:text-indigo-900">
+                <input type="radio" name="auth_mode" value="ad" onchange="render()" class="sr-only">
+                <i class="fa-solid fa-users-gear text-sm"></i>
+                <span class="text-xs font-medium">AD / LDAP</span>
+              </label>
+              <label class="cursor-pointer border rounded-lg p-2.5 flex flex-col items-center justify-center gap-1.5 text-center transition hover:border-indigo-300 has-[:checked]:bg-indigo-50/50 has-[:checked]:border-indigo-600 has-[:checked]:text-indigo-900">
+                <input type="radio" name="auth_mode" value="ad_otp" onchange="render()" class="sr-only">
+                <i class="fa-solid fa-fingerprint text-sm text-indigo-600"></i>
+                <span class="text-xs font-medium">AD + LocalDB OTP</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- LocalDB 群組管理 (可新增) -->
+          <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold text-slate-700"><i class="fa-solid fa-folder-tree mr-1"></i> <span data-i18n="box_groups">LocalDB 群組列表</span></span>
+              <button onclick="addGroup()" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition flex items-center gap-1">
+                <i class="fa-solid fa-plus text-[10px]"></i> <span data-i18n="btn_add_group">新增群組</span>
+              </button>
+            </div>
+            <div id="groups_container" class="space-y-2"></div>
+          </div>
+
+          <!-- LocalDB 使用者管理 (可新增) -->
+          <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold text-slate-700"><i class="fa-solid fa-user-lock mr-1"></i> <span data-i18n="box_users">LocalDB 使用者列表</span></span>
+              <button onclick="addUser()" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition flex items-center gap-1">
+                <i class="fa-solid fa-plus text-[10px]"></i> <span data-i18n="btn_add_user">新增使用者</span>
+              </button>
+            </div>
+            <div id="users_container" class="space-y-2"></div>
+          </div>
+
+          <!-- AD LDAP 參數 -->
+          <div id="ad_section" class="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80 space-y-3 hidden">
+            <div class="text-xs font-semibold text-slate-700 flex justify-between items-center">
+              <span><i class="fa-brands fa-windows mr-1"></i> <span data-i18n="box_ad">Active Directory / LDAP 參數</span></span>
+              <span class="text-[11px] text-slate-400 font-normal">Port 389 / 636</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-600 mb-1" data-i18n="lbl_ad_host">AD 主機 IP</label>
+                <input type="text" id="ad_ip" value="192.168.4.10" class="mono w-full px-2.5 py-1.5 bg-white border rounded text-xs outline-none">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-600 mb-1" data-i18n="lbl_ad_port">LDAP 連線埠</label>
+                <input type="number" id="ad_port" value="389" class="mono w-full px-2.5 py-1.5 bg-white border rounded text-xs outline-none">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-xs text-slate-600 mb-1" data-i18n="lbl_ad_bind_dn">Bind DN 帳號</label>
+                <input type="text" id="ad_bind_dn" value="cn=administrator,cn=users,dc=corp,dc=local" class="mono w-full px-2.5 py-1.5 bg-white border rounded text-xs outline-none">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-xs text-slate-600 mb-1" data-i18n="lbl_ad_bind_pw">Bind 密碼</label>
+                <input type="password" id="ad_bind_pw" value="P@ssw0rd" class="mono w-full px-2.5 py-1.5 bg-white border rounded text-xs outline-none">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: 多角色與授權 (Role / Qualification) -->
+        <div id="tab-role" class="tab-pane hidden space-y-4">
+          <div class="border-b border-slate-100 pb-2 flex justify-between items-center">
+            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span data-i18n="sec_role">角色與 Qualification (條件授權)</span>
+            </h2>
+            <button onclick="addRole()" class="text-xs bg-indigo-600 text-white px-2.5 py-1 rounded hover:bg-indigo-700 transition flex items-center gap-1">
+              <i class="fa-solid fa-plus text-[10px]"></i> <span data-i18n="btn_add_role">新增角色</span>
+            </button>
+          </div>
+
+          <div id="roles_container" class="space-y-3"></div>
+        </div>
+
+        <!-- Tab 4: 資源管理 (Web & RDP) -->
+        <div id="tab-res" class="tab-pane hidden space-y-5">
+          <div class="border-b border-slate-100 pb-2">
+            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span data-i18n="sec_res">資源管理 (Web 應用 & RDP 遠端桌面)</span>
+            </h2>
+          </div>
+
+          <!-- Web 資源 -->
+          <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold text-slate-700"><i class="fa-solid fa-globe mr-1"></i> <span data-i18n="box_web_res">Web 應用資源 (HTTP/HTTPS)</span></span>
+              <button onclick="addWebResource()" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition flex items-center gap-1">
+                <i class="fa-solid fa-plus text-[10px]"></i> <span data-i18n="btn_add_web">新增 Web</span>
+              </button>
+            </div>
+            <div id="web_res_container" class="space-y-2"></div>
+          </div>
+
+          <!-- RDP 資源 -->
+          <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold text-slate-700"><i class="fa-solid fa-desktop mr-1"></i> <span data-i18n="box_rdp_res">RDP 遠端桌面 (Desktop Direct)</span></span>
+              <button onclick="addRdpResource()" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition flex items-center gap-1">
+                <i class="fa-solid fa-plus text-[10px]"></i> <span data-i18n="btn_add_rdp">新增 RDP</span>
+              </button>
+            </div>
+            <div id="rdp_res_container" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- Tab 5: Net Pool 與 VPN 網段 -->
+        <div id="tab-vpn" class="tab-pane hidden space-y-4">
+          <div class="border-b border-slate-100 pb-2">
+            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span data-i18n="sec_vpn">VPN 網段資源與 Net Pool (通道)</span>
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_rg">資源群組名稱 (Resource Group)</label>
+              <input type="text" id="rg_name" value="rg_it" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_lan">允許訪問目標網段 (CIDR)</label>
+              <input type="text" id="lan_subnet" value="192.168.1.0/24" class="mono w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <p class="text-[11px] text-slate-400 mt-1" data-i18n="tip_full_tunnel">填寫 0.0.0.0/0 則為 Full Tunnel 模式</p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_np">Net Pool 名稱</label>
+                <input type="text" id="np_name" value="np_it" class="mono w-full px-2.5 py-1.5 border rounded text-xs outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_ps">動態分配起始 IP</label>
+                <input type="text" id="np_start" value="10.10.10.100" class="mono w-full px-2.5 py-1.5 border rounded text-xs outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1" data-i18n="lbl_pe">動態分配結束 IP</label>
+                <input type="text" id="np_end" value="10.10.10.200" class="mono w-full px-2.5 py-1.5 border rounded text-xs outline-none">
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-6 pt-2">
+              <label class="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer">
+                <input type="checkbox" id="np_nat" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                <span data-i18n="chk_nat">啟用 Net Pool NAT 轉譯</span>
+              </label>
+              <label class="flex items-center space-x-2 text-xs font-medium text-slate-700 cursor-pointer">
+                <input type="checkbox" id="np_autolaunch" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                <span data-i18n="chk_autolaunch">登入後自動建立 L3 通道 (Auto Launch)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 6: 安全防護 (SPA / HWID) -->
+        <div id="tab-sec" class="tab-pane hidden space-y-4">
+          <div class="border-b border-slate-100 pb-2">
+            <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span data-i18n="sec_sec">零信任 SPA 與硬體特徵綁定 (HWID)</span>
+            </h2>
+          </div>
+
+          <div class="space-y-3">
+            <label class="flex items-center space-x-2 text-xs font-semibold text-slate-800 cursor-pointer">
+              <input type="checkbox" id="enable_spa" onchange="render()" class="rounded text-indigo-600 focus:ring-indigo-500">
+              <span data-i18n="chk_spa">啟用 SPA (單包授權敲門機制 / 隱蔽 443 埠)</span>
+            </label>
+            
+            <div id="spa_params" class="pl-6 space-y-3 hidden">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-600 mb-1" data-i18n="lbl_spa_port">SPA UDP 敲門埠</label>
+                  <input type="number" id="spa_port" value="8443" class="mono w-full px-2.5 py-1.5 border rounded text-xs outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-600 mb-1" data-i18n="lbl_spa_key">SPA 預先共用密鑰</label>
+                  <input type="text" id="spa_key" value="ArrayZTKey2026" class="mono w-full px-2.5 py-1.5 border rounded text-xs outline-none">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 space-y-3">
+            <label class="flex items-center space-x-2 text-xs font-semibold text-slate-800 cursor-pointer">
+              <input type="checkbox" id="enable_hwid" onchange="render()" class="rounded text-indigo-600 focus:ring-indigo-500">
+              <span data-i18n="chk_hwid">啟用 HardwareID 硬體指紋認證 (Policy Centre)</span>
+            </label>
+            
+            <div id="hwid_params" class="pl-6 space-y-3 hidden">
+              <div>
+                <label class="block text-xs text-slate-600 mb-1" data-i18n="lbl_hwid_policy">硬體特徵政策</label>
+                <select id="hwid_policy" class="mono w-full px-2.5 py-1.5 border rounded text-xs outline-none bg-white">
+                  <option value="machineid" selected>machineid (MAC + CPU ID + OS ID)</option>
+                  <option value="mac_all">mac_all (設備全網卡 MAC 綁定)</option>
+                  <option value="mac_any">mac_any (任一有效 MAC 符合即可)</option>
+                </select>
+              </div>
+              <label class="flex items-center space-x-2 text-xs text-slate-600 cursor-pointer">
+                <input type="checkbox" id="hwid_autocollect" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                <span data-i18n="chk_autocollect">首次登入自動採集硬體指紋 (Auto Collect)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 面板底座狀態列 -->
+      <div class="bg-slate-50 border-t border-slate-200 px-6 py-3 flex items-center justify-between text-xs text-slate-500">
+        <span id="cfg_status" data-i18n="status_ready">● 參數就緒，即時編譯完成</span>
+        <button onclick="resetDefaults()" class="text-indigo-600 hover:text-indigo-800 font-medium" data-i18n="btn_reset">重設為預設值</button>
+      </div>
+
+    </section>
+
+    <!-- 右側：CLI 產生預覽與匯出 (佔 5 格) -->
+    <section class="lg:col-span-5 flex flex-col space-y-4">
+      
+      <!-- 輸出代碼卡片 -->
+      <div class="bg-slate-900 rounded-xl shadow-lg border border-slate-800 flex flex-col flex-1 overflow-hidden min-h-[600px]">
+        
+        <!-- 終端機控制列 -->
+        <div class="bg-slate-950 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+            <span class="text-xs font-mono text-slate-400 pl-2">ztag_poc_deploy.cfg</span>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="copyCLI()" id="btnCopy" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded text-xs font-medium border border-slate-700 transition flex items-center gap-1.5">
+              <i class="fa-regular fa-copy"></i> <span id="copyTxt" data-i18n="btn_copy">複製全部</span>
+            </button>
+            <button onclick="downloadCfg()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
+              <i class="fa-solid fa-download"></i> <span data-i18n="btn_download">下載 .cfg</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 終端機程式碼輸出區塊 -->
+        <div class="p-4 overflow-y-auto flex-1 font-mono text-xs text-slate-300 leading-relaxed bg-slate-900 selection:bg-indigo-500 selection:text-white">
+          <pre id="outputCode" class="whitespace-pre-wrap break-all"></pre>
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="bg-slate-950/80 px-4 py-2 border-t border-slate-800 text-[11px] text-slate-500 flex justify-between items-center">
+          <span data-i18n="tip_footer">可直接貼至 Console/SSH 或透過 WebUI 匯入</span>
+          <span class="font-mono text-indigo-400 font-semibold">write memory all ✔</span>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    // 語言字典
+    const i18n = {
+      zh: {
+        app_title: "Array ZTAG CLI 設定檔產生器",
+        app_subtitle: "快速產出可直接匯入 Array ZTAG 的 CLI 初始化與策略腳本",
+        tab_net: "1. 基礎網路",
+        tab_aaa: "2. 認證與帳號",
+        tab_role: "3. 角色與授權",
+        tab_res: "4. 資源管理",
+        tab_vpn: "5. Net Pool",
+        tab_sec: "6. 安全防護",
+        sec_net: "管理網路 & Virtual Site 設置",
+        lbl_mgip: "管理介面 IP (Port 1)",
+        lbl_mask: "網路遮罩",
+        lbl_gw: "預設閘道 (Gateway)",
+        lbl_dns: "DNS 主機 IP",
+        lbl_vsname: "Virtual Site 名稱",
+        lbl_vsip: "Virtual Site IP",
+        lbl_vsport: "SSL Port",
+        sec_aaa: "認證伺服器與帳號資料庫",
+        lbl_auth_arch: "主要認證架構",
+        opt_localdb: "純 LocalDB",
+        opt_otp_only: "僅 OTP (Only OTP)",
+        box_groups: "LocalDB 群組列表",
+        btn_add_group: "新增群組",
+        box_users: "LocalDB 使用者列表",
+        btn_add_user: "新增使用者",
+        box_ad: "Active Directory / LDAP 參數",
+        lbl_ad_host: "AD 主機 IP",
+        lbl_ad_port: "LDAP 連線埠",
+        lbl_ad_bind_dn: "Bind DN 帳號",
+        lbl_ad_bind_pw: "Bind 密碼",
+        sec_role: "角色與 Qualification (條件授權)",
+        btn_add_role: "新增角色",
+        sec_res: "資源管理 (Web 應用 & RDP 遠端桌面)",
+        box_web_res: "Web 應用資源 (HTTP/HTTPS)",
+        btn_add_web: "新增 Web",
+        box_rdp_res: "RDP 遠端桌面 (Desktop Direct)",
+        btn_add_rdp: "新增 RDP",
+        sec_vpn: "VPN 網段資源與 Net Pool (通道)",
+        lbl_rg: "資源群組名稱 (Resource Group)",
+        lbl_lan: "允許訪問目標網段 (CIDR)",
+        tip_full_tunnel: "填寫 0.0.0.0/0 則為 Full Tunnel 模式",
+        lbl_np: "Net Pool 名稱",
+        lbl_ps: "動態分配起始 IP",
+        lbl_pe: "動態分配結束 IP",
+        chk_nat: "啟用 Net Pool NAT 轉譯",
+        chk_autolaunch: "登入後自動建立 L3 通道 (Auto Launch)",
+        sec_sec: "零信任 SPA 與硬體特徵綁定 (HWID)",
+        chk_spa: "啟用 SPA (單包授權敲門機制 / 隱蔽 443 埠)",
+        lbl_spa_port: "SPA UDP 敲門埠",
+        lbl_spa_key: "SPA 預先共用密鑰",
+        chk_hwid: "啟用 HardwareID 硬體指紋認證 (Policy Centre)",
+        lbl_hwid_policy: "硬體特徵政策",
+        chk_autocollect: "首次登入自動採集硬體指紋 (Auto Collect)",
+        status_ready: "● 參數就緒，即時編譯完成",
+        btn_reset: "重設為預設值",
+        btn_copy: "複製全部",
+        btn_copied: "已複製 ✓",
+        btn_download: "下載 .cfg",
+        tip_footer: "可直接貼至 Console/SSH 或透過 WebUI 匯入",
+        ph_grp_name: "群組名稱",
+        ph_usr_name: "使用者名稱",
+        ph_usr_pwd: "密碼",
+        lbl_bind_grp: "所屬群組",
+        lbl_role_name: "角色名稱",
+        lbl_qual_name: "條件名稱 (Qual)",
+        lbl_assign_to: "指派給角色"
+      },
+      en: {
+        app_title: "Array ZTAG CLI Config Generator",
+        app_subtitle: "Rapidly generate ready-to-run CLI initialization & policy scripts for Array ZTAG",
+        tab_net: "1. Network",
+        tab_aaa: "2. AAA & Users",
+        tab_role: "3. Roles",
+        tab_res: "4. Resources",
+        tab_vpn: "5. Net Pool",
+        tab_sec: "6. Security",
+        sec_net: "Management Network & Virtual Site Settings",
+        lbl_mgip: "Management Port 1 IP",
+        lbl_mask: "Port 1 Netmask",
+        lbl_gw: "Default Gateway",
+        lbl_dns: "DNS Server IP",
+        lbl_vsname: "Virtual Site Name",
+        lbl_vsip: "Virtual Site IP",
+        lbl_vsport: "SSL Port",
+        sec_aaa: "Authentication Server & User Directory",
+        lbl_auth_arch: "Primary Auth Architecture",
+        opt_localdb: "LocalDB Only",
+        opt_otp_only: "Only OTP",
+        box_groups: "LocalDB Group List",
+        btn_add_group: "Add Group",
+        box_users: "LocalDB User List",
+        btn_add_user: "Add User",
+        box_ad: "Active Directory / LDAP Parameters",
+        lbl_ad_host: "AD Host IP",
+        lbl_ad_port: "LDAP Port",
+        lbl_ad_bind_dn: "Bind DN Account",
+        lbl_ad_bind_pw: "Bind Password",
+        sec_role: "Role & Qualification Policy",
+        btn_add_role: "Add Role",
+        sec_res: "Resource Management (Web & RDP)",
+        box_web_res: "Web Application Resources",
+        btn_add_web: "Add Web",
+        box_rdp_res: "RDP Remote Desktop (Desktop Direct)",
+        btn_add_rdp: "Add RDP",
+        sec_vpn: "VPN Resources & Net Pool (Tunnels)",
+        lbl_rg: "Resource Group Name",
+        lbl_lan: "Allowed Target Subnet (CIDR)",
+        tip_full_tunnel: "Enter 0.0.0.0/0 for Full Tunnel mode",
+        lbl_np: "Net Pool Name",
+        lbl_ps: "Dynamic Pool Start IP",
+        lbl_pe: "Dynamic Pool End IP",
+        chk_nat: "Enable Net Pool NAT Translation",
+        chk_autolaunch: "Auto Launch L3 Tunnel on Login",
+        sec_sec: "Zero Trust SPA & Hardware Fingerprint (HWID)",
+        chk_spa: "Enable SPA (Single Packet Auth / Cloaked 443)",
+        lbl_spa_port: "SPA Knock UDP Port",
+        lbl_spa_key: "SPA Pre-Shared Secret",
+        chk_hwid: "Enable HardwareID Device Binding (Policy Centre)",
+        lbl_hwid_policy: "HWID Policy",
+        chk_autocollect: "Auto Collect HWID on First Login",
+        status_ready: "● Ready & Compiled in Real-Time",
+        btn_reset: "Reset Defaults",
+        btn_copy: "Copy All",
+        btn_copied: "Copied ✓",
+        btn_download: "Download .cfg",
+        tip_footer: "Ready to paste in Console/SSH or import via WebUI",
+        ph_grp_name: "Group Name",
+        ph_usr_name: "Username",
+        ph_usr_pwd: "Password",
+        lbl_bind_grp: "Assigned Group",
+        lbl_role_name: "Role Name",
+        lbl_qual_name: "Qual Name",
+        lbl_assign_to: "Assign to Role"
+      }
+    };
+
+    let currentLang = 'zh';
+
+    // 動態資料陣列
+    let groups = ["localDB_group", "RD_group"];
+    let users = [
+      { name: "test", pwd: "test1234", group: "localDB_group" },
+      { name: "rd_user", pwd: "rd1234", group: "RD_group" }
+    ];
+    let roles = [
+      { name: "R_IT", qual: "q_it", group: "localDB_group" },
+      { name: "R_RD", qual: "q_rd", group: "RD_group" }
+    ];
+    let webResources = [
+      { name: "web_intranet", url: "http://192.168.1.50", role: "R_IT" }
+    ];
+    let rdpResources = [
+      { name: "pc_finance", host: "192.168.1.100", port: 3389, role: "R_IT" }
+    ];
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang][key]) el.textContent = i18n[lang][key];
+      });
+
+      if (lang === 'zh') {
+        document.getElementById('langZh').className = "px-2.5 py-1 rounded text-xs font-medium transition bg-indigo-600 text-white";
+        document.getElementById('langEn').className = "px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white";
+      } else {
+        document.getElementById('langEn').className = "px-2.5 py-1 rounded text-xs font-medium transition bg-indigo-600 text-white";
+        document.getElementById('langZh').className = "px-2.5 py-1 rounded text-xs font-medium transition text-slate-400 hover:text-white";
+      }
+      renderDOM();
+      render();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active', 'border-indigo-600', 'text-indigo-600');
+        btn.classList.add('border-transparent', 'text-slate-600');
+      });
+      document.getElementById(tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('btn-' + tabId);
+      activeBtn.classList.add('active', 'border-indigo-600', 'text-indigo-600');
+      activeBtn.classList.remove('border-transparent', 'text-slate-600');
+    }
+
+    // 動態群組管理
+    function addGroup() {
+      const gname = `group_${groups.length + 1}`;
+      groups.push(gname);
+      renderDOM();
+      render();
+    }
+    function removeGroup(idx) {
+      if (groups.length <= 1) return;
+      groups.splice(idx, 1);
+      renderDOM();
+      render();
+    }
+
+    // 動態使用者管理
+    function addUser() {
+      users.push({ name: `user_${users.length + 1}`, pwd: "password", group: groups[0] || "localDB_group" });
+      renderDOM();
+      render();
+    }
+    function removeUser(idx) {
+      if (users.length <= 1) return;
+      users.splice(idx, 1);
+      renderDOM();
+      render();
+    }
+
+    // 動態角色管理
+    function addRole() {
+      const rid = roles.length + 1;
+      roles.push({ name: `R_Role${rid}`, qual: `q_role${rid}`, group: groups[0] || "localDB_group" });
+      renderDOM();
+      render();
+    }
+    function removeRole(idx) {
+      if (roles.length <= 1) return;
+      roles.splice(idx, 1);
+      renderDOM();
+      render();
+    }
+
+    // 動態 Web 資源
+    function addWebResource() {
+      webResources.push({ name: `web_app${webResources.length + 1}`, url: "http://192.168.1.10", role: roles[0]?.name || "R_IT" });
+      renderDOM();
+      render();
+    }
+    function removeWebResource(idx) {
+      webResources.splice(idx, 1);
+      renderDOM();
+      render();
+    }
+
+    // 動態 RDP 資源
+    function addRdpResource() {
+      rdpResources.push({ name: `rdp_pc${rdpResources.length + 1}`, host: "192.168.1.20", port: 3389, role: roles[0]?.name || "R_IT" });
+      renderDOM();
+      render();
+    }
+    function removeRdpResource(idx) {
+      rdpResources.splice(idx, 1);
+      renderDOM();
+      render();
+    }
+
+    // DOM 繪製多清單項目
+    function renderDOM() {
+      // 1. 群組
+      const gContainer = document.getElementById('groups_container');
+      gContainer.innerHTML = groups.map((g, idx) => `
+        <div class="flex items-center gap-2">
+          <input type="text" value="${g}" onchange="groups[${idx}]=this.value.trim(); render();" class="mono flex-1 px-2.5 py-1.5 bg-white border rounded text-xs outline-none">
+          <button onclick="removeGroup(${idx})" class="text-rose-500 hover:text-rose-700 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      `).join('');
+
+      // 2. 使用者
+      const uContainer = document.getElementById('users_container');
+      uContainer.innerHTML = users.map((u, idx) => `
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-slate-200">
+          <input type="text" value="${u.name}" onchange="users[${idx}].name=this.value.trim(); render();" placeholder="User" class="mono md:col-span-4 px-2 py-1 border rounded text-xs">
+          <input type="text" value="${u.pwd}" onchange="users[${idx}].pwd=this.value.trim(); render();" placeholder="Pwd" class="mono md:col-span-3 px-2 py-1 border rounded text-xs">
+          <select onchange="users[${idx}].group=this.value; render();" class="mono md:col-span-4 px-2 py-1 border rounded text-xs bg-slate-50">
+            ${groups.map(g => `<option value="${g}" ${g === u.group ? 'selected' : ''}>${g}</option>`).join('')}
+          </select>
+          <button onclick="removeUser(${idx})" class="md:col-span-1 text-rose-500 hover:text-rose-700 text-xs text-center"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      `).join('');
+
+      // 3. 角色
+      const rContainer = document.getElementById('roles_container');
+      rContainer.innerHTML = roles.map((r, idx) => `
+        <div class="p-3 bg-slate-50 border rounded-lg space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-semibold text-xs text-slate-700">Role #${idx + 1}</span>
+            <button onclick="removeRole(${idx})" class="text-rose-500 hover:text-rose-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-0.5">${i18n[currentLang].lbl_role_name}</label>
+              <input type="text" value="${r.name}" onchange="roles[${idx}].name=this.value.trim(); render();" class="mono w-full px-2 py-1 border rounded text-xs bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-0.5">${i18n[currentLang].lbl_qual_name}</label>
+              <input type="text" value="${r.qual}" onchange="roles[${idx}].qual=this.value.trim(); render();" class="mono w-full px-2 py-1 border rounded text-xs bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-0.5">${i18n[currentLang].lbl_bind_grp}</label>
+              <select onchange="roles[${idx}].group=this.value; render();" class="mono w-full px-2 py-1 border rounded text-xs bg-white">
+                ${groups.map(g => `<option value="${g}" ${g === r.group ? 'selected' : ''}>${g}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // 4. Web 資源
+      const webContainer = document.getElementById('web_res_container');
+      webContainer.innerHTML = webResources.map((res, idx) => `
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-slate-200">
+          <input type="text" value="${res.name}" onchange="webResources[${idx}].name=this.value.trim(); render();" placeholder="Resource Name" class="mono md:col-span-3 px-2 py-1 border rounded text-xs">
+          <input type="text" value="${res.url}" onchange="webResources[${idx}].url=this.value.trim(); render();" placeholder="http://..." class="mono md:col-span-5 px-2 py-1 border rounded text-xs">
+          <select onchange="webResources[${idx}].role=this.value; render();" class="mono md:col-span-3 px-2 py-1 border rounded text-xs bg-slate-50">
+            ${roles.map(r => `<option value="${r.name}" ${r.name === res.role ? 'selected' : ''}>${r.name}</option>`).join('')}
+          </select>
+          <button onclick="removeWebResource(${idx})" class="md:col-span-1 text-rose-500 hover:text-rose-700 text-xs text-center"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      `).join('');
+
+      // 5. RDP 資源
+      const rdpContainer = document.getElementById('rdp_res_container');
+      rdpContainer.innerHTML = rdpResources.map((rdp, idx) => `
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-slate-200">
+          <input type="text" value="${rdp.name}" onchange="rdpResources[${idx}].name=this.value.trim(); render();" placeholder="pc01" class="mono md:col-span-3 px-2 py-1 border rounded text-xs">
+          <input type="text" value="${rdp.host}" onchange="rdpResources[${idx}].host=this.value.trim(); render();" placeholder="IP / Host" class="mono md:col-span-3 px-2 py-1 border rounded text-xs">
+          <input type="number" value="${rdp.port || 3389}" onchange="rdpResources[${idx}].port=this.value.trim(); render();" placeholder="3389" class="mono md:col-span-2 px-2 py-1 border rounded text-xs">
+          <select onchange="rdpResources[${idx}].role=this.value; render();" class="mono md:col-span-3 px-2 py-1 border rounded text-xs bg-slate-50">
+            ${roles.map(r => `<option value="${r.name}" ${r.name === rdp.role ? 'selected' : ''}>${r.name}</option>`).join('')}
+          </select>
+          <button onclick="removeRdpResource(${idx})" class="md:col-span-1 text-rose-500 hover:text-rose-700 text-xs text-center"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      `).join('');
+    }
+
+    // 核心 CLI 渲染函數
+    function render() {
+      const mgip = document.getElementById('mgip').value.trim();
+      const mgmask = document.getElementById('mgmask').value.trim();
+      const gw = document.getElementById('gw').value.trim();
+      const dns = document.getElementById('dns').value.trim();
+      const vsname = document.getElementById('vsname').value.trim();
+      const vsip = document.getElementById('vsip').value.trim();
+      const vsport = document.getElementById('vsport').value.trim();
+
+      const authMode = document.querySelector('input[name="auth_mode"]:checked').value;
+      const adIp = document.getElementById('ad_ip').value.trim();
+      const adPort = document.getElementById('ad_port').value.trim();
+      const adBindDn = document.getElementById('ad_bind_dn').value.trim();
+      const adBindPw = document.getElementById('ad_bind_pw').value.trim();
+
+      const adSection = document.getElementById('ad_section');
+      if (authMode === 'ad' || authMode === 'ad_otp') {
+        adSection.classList.remove('hidden');
+      } else {
+        adSection.classList.add('hidden');
+      }
+
+      const rgName = document.getElementById('rg_name').value.trim();
+      const lanSubnet = document.getElementById('lan_subnet').value.trim();
+      const npName = document.getElementById('np_name').value.trim();
+      const npStart = document.getElementById('np_start').value.trim();
+      const npEnd = document.getElementById('np_end').value.trim();
+      const npNat = document.getElementById('np_nat').checked;
+      const npAuto = document.getElementById('np_autolaunch').checked;
+
+      const enableSpa = document.getElementById('enable_spa').checked;
+      const spaPort = document.getElementById('spa_port').value.trim();
+      const spaKey = document.getElementById('spa_key').value.trim();
+      document.getElementById('spa_params').classList.toggle('hidden', !enableSpa);
+
+      const enableHwid = document.getElementById('enable_hwid').checked;
+      const hwidPolicy = document.getElementById('hwid_policy').value;
+      const hwidAuto = document.getElementById('hwid_autocollect').checked;
+      document.getElementById('hwid_params').classList.toggle('hidden', !enableHwid);
+
+      let cli = [];
+
+      cli.push("############################################################");
+      cli.push(`# Array Networks ZTAG Configuration Script`);
+      cli.push(`# Generated: ${new Date().toISOString()}`);
+      cli.push(`# Mode: ${authMode.toUpperCase()} | Virtual Site: ${vsname}`);
+      cli.push("############################################################\n");
+
+      // 階段 1: 網路與基本管理
+      cli.push("! === Step 1: Base Network & Management ===");
+      cli.push("enable");
+      cli.push("configure terminal");
+      cli.push(`ip address port1 ${mgip} ${mgmask}`);
+      cli.push(`ip route default ${gw}`);
+      cli.push("webui on");
+      cli.push(`webui ip ${mgip}`);
+      cli.push("write memory all\n");
+
+      // 階段 2: Virtual Site
+      cli.push("! === Step 2: Virtual Site & SSL Certificate ===");
+      cli.push(`virtual site name "${vsname}"`);
+      cli.push(`virtual site ip "${vsname}" ${vsip} ${vsport}`);
+      cli.push(`switch ${vsname}`);
+      cli.push("ssl csr");
+      cli.push(`ssl activate certificate "${vsname}"`);
+      cli.push("ssl start\n");
+
+      // 階段 3: AAA 認證
+      cli.push("! === Step 3: AAA Authentication & LocalDB ===");
+      cli.push("aaa on");
+      
+      // 輸出所有 LocalDB 群組
+      groups.forEach(g => {
+        cli.push(`localdb group "${g}"`);
+      });
+
+      // 輸出所有使用者
+      users.forEach(u => {
+        cli.push(`localdb account "${u.name}" "${u.pwd}"`);
+        cli.push(`localdb member "${u.group}" "${u.name}"`);
+      });
+
+      let methodToBind = "ldb";
+
+      if (authMode === "localdb") {
+        cli.push(`aaa server name localdb "${vsname}"`);
+        cli.push("aaa server localdb authmode 0");
+        cli.push('aaa method name "ldb"');
+        cli.push(`aaa method server "ldb" "${vsname}"`);
+        methodToBind = "ldb";
+      } else if (authMode === "otp_only") {
+        cli.push(`aaa server name localdb "${vsname}"`);
+        cli.push("aaa server localdb authmode 1");
+        cli.push('aaa method name "otp_only"');
+        cli.push(`aaa method server "otp_only" "${vsname}"`);
+        methodToBind = "otp_only";
+      } else if (authMode === "ad") {
+        cli.push('aaa server name ldap "AD"');
+        cli.push(`aaa server ldap host "AD" ${adIp} ${adPort} "${adBindDn}" "${adBindPw}"`);
+        cli.push('aaa server ldap searchfilter "AD" "(sAMAccountName=<USER>)"');
+        cli.push('aaa server ldap attribute group "AD" "memberOf"');
+        cli.push(`aaa server ldap defaultgroup "AD" "${groups[0] || 'localDB_group'}"`);
+        cli.push('aaa method name "ad"');
+        cli.push('aaa method server "ad" "AD"');
+        methodToBind = "ad";
+      } else if (authMode === "ad_otp") {
+        cli.push(`aaa server name localdb "${vsname}"`);
+        cli.push("aaa server localdb authmode 1");
+        cli.push('aaa server name ldap "AD"');
+        cli.push(`aaa server ldap host "AD" ${adIp} ${adPort} "${adBindDn}" "${adBindPw}"`);
+        cli.push('aaa server ldap searchfilter "AD" "(sAMAccountName=<USER>)"');
+        cli.push('aaa server ldap attribute group "AD" "memberOf"');
+        cli.push(`aaa server ldap defaultgroup "AD" "${groups[0] || 'localDB_group'}"`);
+        cli.push('aaa method name "ad_otp"');
+        cli.push('aaa method server "ad_otp" "AD"');
+        cli.push(`aaa method otp "ad_otp" "${vsname}"`);
+        methodToBind = "ad_otp";
+      }
+      cli.push("");
+
+      // 階段 4: 多角色與 Qualification 綁定
+      cli.push("! === Step 4: Multiple Roles & Qualification Binding ===");
+      roles.forEach(r => {
+        cli.push(`role name "${r.name}"`);
+        cli.push(`role qualification "${r.name}" "${r.qual}"`);
+        cli.push(`role condition "${r.name}" "${r.qual}" "GROUPNAME IS ${r.group}"`);
+        cli.push(`role condition "${r.name}" "${r.qual}" "AAAMETHOD IS ${methodToBind}"`);
+      });
+      cli.push("");
+
+      // 階段 5: 資源管理 (Web & RDP Desktop Direct)
+      if (webResources.length > 0 || rdpResources.length > 0) {
+        cli.push("! === Step 5: Resource Management (Web & RDP) ===");
+        
+        // Web 應用
+        webResources.forEach((w, idx) => {
+          cli.push(`vpn resource web "${w.name}" "${w.url}"`);
+          cli.push(`vpn resource assign torole "${w.name}" "${w.role}"`);
+        });
+
+        // RDP 桌面
+        rdpResources.forEach(rdp => {
+          cli.push(`vpn resource desktopdirect "${rdp.name}" ${rdp.host}`);
+          cli.push(`vpn resource assign torole "${rdp.name}" "${rdp.role}"`);
+        });
+        cli.push("");
+      }
+
+      // 階段 6: VPN 網路資源與 Net Pool
+      cli.push("! === Step 6: VPN Net Pool & Subnet Assignment ===");
+      cli.push(`vpn resource group "${rgName}"`);
+      cli.push(`vpn resource groupitem network "${rgName}" 1 "${lanSubnet}"`);
+      
+      // 指派給第一個 Role 或所有 Role
+      roles.forEach(r => {
+        cli.push(`vpn resource assign torole "${rgName}" "${r.name}"`);
+      });
+
+      cli.push(`vpn netpool name "${npName}"`);
+      cli.push(`vpn netpool iprange dynamic "${npName}" ${npStart} ${npEnd}`);
+      if (npNat) cli.push(`vpn netpool nat "${npName}"`);
+      cli.push(`vpn netpool dns nameserver "${npName}" ${dns}`);
+      if (npAuto) cli.push(`vpn netpool autolaunch "${npName}"`);
+      cli.push(`vpn netpool keepalive "${npName}" 30`);
+      roles.forEach(r => {
+        cli.push(`vpn netpool assign torole "${npName}" "${r.name}"`);
+      });
+      cli.push("vpn on\n");
+
+      // 階段 7: 零信任安全
+      if (enableSpa || enableHwid) {
+        cli.push("! === Step 7: Zero Trust Policy (SPA / HWID) ===");
+        if (enableSpa) {
+          cli.push(`spa on ${spaPort}`);
+          cli.push(`spa secret ${spaKey}`);
+          cli.push(`spa authmethod "${methodToBind}"`);
+        }
+        if (enableHwid) {
+          cli.push("aaa hardwareid on");
+          groups.forEach(g => {
+            cli.push(`localdb hardwareid on "${g}"`);
+            cli.push(`localdb hardwareid policy "${g}" ${hwidPolicy}`);
+            if (hwidAuto) cli.push(`localdb hardwareid autocollect "${g}"`);
+          });
+        }
+        cli.push("");
+      }
+
+      // 結尾儲存
+      cli.push("! === Finalize: Save to Flash Memory ===");
+      cli.push("write memory all");
+
+      document.getElementById('outputCode').textContent = cli.join("\n");
+    }
+
+    function resetDefaults() {
+      groups = ["localDB_group", "RD_group"];
+      users = [
+        { name: "test", pwd: "test1234", group: "localDB_group" },
+        { name: "rd_user", pwd: "rd1234", group: "RD_group" }
+      ];
+      roles = [
+        { name: "R_IT", qual: "q_it", group: "localDB_group" },
+        { name: "R_RD", qual: "q_rd", group: "RD_group" }
+      ];
+      webResources = [
+        { name: "web_intranet", url: "http://192.168.1.50", role: "R_IT" }
+      ];
+      rdpResources = [
+        { name: "pc_finance", host: "192.168.1.100", port: 3389, role: "R_IT" }
+      ];
+      renderDOM();
+      render();
+    }
+
+    function copyCLI() {
+      const code = document.getElementById('outputCode').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const copyTxt = document.getElementById('copyTxt');
+        const originalText = copyTxt.textContent;
+        copyTxt.textContent = i18n[currentLang].btn_copied;
+        document.getElementById('btnCopy').classList.add('bg-green-700', 'text-white');
+        setTimeout(() => {
+          copyTxt.textContent = originalText;
+          document.getElementById('btnCopy').classList.remove('bg-green-700', 'text-white');
+        }, 1500);
+      });
+    }
+
+    function downloadCfg() {
+      const text = document.getElementById('outputCode').textContent;
+      const vs = document.getElementById('vsname').value.trim() || 'ztag';
+      const filename = `ztag_${vs}_config.cfg`;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    document.querySelectorAll('input, select').forEach(element => {
+      element.addEventListener('input', render);
+      element.addEventListener('change', render);
+    });
+
+    renderDOM();
+    render();
+  </script>
+</body>
+</html>
